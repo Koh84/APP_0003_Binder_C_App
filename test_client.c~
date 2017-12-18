@@ -95,6 +95,14 @@ int main(int argc, char **argv)
     	uint32_t handle;
 	int ret;
 
+	if(argc < 2)
+	{
+		fprintf(stderr, "Usage\n");
+		fprintf(stderr, "%s hello\n", argv[0]);
+		fprintf(stderr, "%s hello <name>\n", argv[0]);
+		return -1;
+	}
+
     	bs = binder_open(128*1024);
     	if (!bs) {
         	fprintf(stderr, "failed to open binder driver\n");
