@@ -54,9 +54,7 @@ int str16eq(const uint16_t *a, const char *b)
     return 1;
 }
 
-static int selinux_enabled;
 static char *service_manager_context;
-static struct selabel_handle* sehandle;
 
 static bool check_mac_perms(pid_t spid, const char *tctx, const char *perm, const char *name)
 {
@@ -204,6 +202,8 @@ int do_add_service(struct binder_state *bs,
         svclist = si;
     }
 
+    ALOGI("add_service('%s'), handle = %d)\n", str8(s, len), handle);
+	
     binder_acquire(bs, handle);
     binder_link_to_death(bs, handle, &si->death);
     return 0;
@@ -244,14 +244,6 @@ int svcmgr_handler(struct binder_state *bs,
         memcmp(svcmgr_id, s, sizeof(svcmgr_id))) {
         fprintf(stderr,"invalid id %s\n", str8(s, len));
         return -1;
-    }
-
-    if (sehandle && selinux_status_updated() > 0) {
-        struct selabel_handle *tmp_sehandle = selinux_android_service_context_handle();
-        if (tmp_sehandle) {
-            selabel_close(sehandle);
-            sehandle = tmp_sehandle;
-        }
     }
 
     switch(txn->code) {
@@ -318,21 +310,6 @@ int main(int argc, char **argv)
     if (binder_become_context_manager(bs)) {
         ALOGE("cannot become context manager (%s)\n", strerror(errno));
         return -1;
-    }
-
-    selinux_enabled = is_selinux_enabled();
-    sehandle = selinux_android_service_context_handle();
-
-    if (selinux_enabled > 0) {
-        if (sehandle == NULL) {
-            ALOGE("SELinux: Failed to acquire sehandle. Aborting.\n");
-            abort();
-        }
-
-        if (getcon(&service_manager_context) != 0) {
-            ALOGE("SELinux: Failed to acquire service_manager context. Aborting.\n");
-            abort();
-        }
     }
 
     svcmgr_handle = BINDER_SERVICE_MANAGER;

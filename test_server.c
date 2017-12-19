@@ -48,6 +48,19 @@ int sayhello_to(char *name)
 	return cnt;
 }
 
+void saygoodbye(void)
+{
+	static int cnt = 0;
+	fprintf(stderr, "say goodbye : %d\n", cnt++);
+}
+
+int saygoodbye_to(char *name)
+{
+	static int cnt = 0;
+	fprintf(stderr, "say goodbye to %s : %d\n", name, cnt++);
+	return cnt;
+}
+
 int hello_service_handler(struct binder_state *bs,
                    struct binder_transaction_data *txn,
                    struct binder_io *msg,
@@ -107,6 +120,105 @@ int hello_service_handler(struct binder_state *bs,
     return 0;
 }
 
+int goodbye_service_handler(struct binder_state *bs,
+                   struct binder_transaction_data *txn,
+                   struct binder_io *msg,
+                   struct binder_io *reply)
+{
+	/* according to txn->code, we can understand which function to call */
+	/* if parameters are needed, it can be taken from msg */
+	/* if reply is needed, can store result in reply */
+	
+	/* sayhello */
+ 	/* sayhello_to */
+
+
+	uint16_t *s;
+	char name[512];
+	size_t len;
+	uint32_t handle;
+	uint32_t strict_policy;
+	int i;
+
+    // Equivalent to Parcel::enforceInterface(), reading the RPC
+    // header with the strict mode policy mask and the interface name.
+    // Note that we ignore the strict_policy and don't propagate it
+    // further (since we do no outbound RPCs anyway).
+    strict_policy = bio_get_uint32(msg);
+
+    switch(txn->code) {
+    case GOODBYE_SVR_CMD_SAYGOODBYE:
+	saygoodbye();
+     	return 0;
+
+    case GOODBYE_SVR_CMD_SAYGOODBYE_TO:
+	/* read data */
+	s = bio_get_string16(msg, &len);
+	if (s == NULL) {
+		return -1;
+	}
+
+	/* parse data */
+	for(i = 0; i<len; i++)
+		name[i] = s[i];
+	name[i] = '\0';
+
+	/* process data */
+	i = saygoodbye_to(name);
+
+	/* reply */
+	bio_put_uint32(reply, i);
+
+        break;
+
+    default:
+        fprintf(stderr, "unknown code %d\n", txn->code);
+        return -1;
+    }
+
+    return 0;
+}
+
+/* v4 */
+/*int test_server_handler(struct binder_state *bs,
+                   struct binder_transaction_data *txn,
+                   struct binder_io *msg,
+                   struct binder_io *reply)
+{
+	if(txn->target.ptr == 123)
+	{
+		return hello_service_handler(bs, txn, msg, reply);
+	}
+	else if(txn->target.ptr == 124)
+	{
+		return goodbye_service_handler(bs, txn, msg, reply);
+	}
+	else
+		return -1;
+}*/
+
+/* v5 */
+int test_server_handler(struct binder_state *bs,
+                   struct binder_transaction_data *txn,
+                   struct binder_io *msg,
+                   struct binder_io *reply)
+{
+	int (*handler)(struct binder_state *bs,
+                   struct binder_transaction_data *txn,
+                   struct binder_io *msg,
+                   struct binder_io *reply);
+
+	handler = (int (*)(struct binder_state *bs,
+                   struct binder_transaction_data *txn,
+                   struct binder_io *msg,
+                   struct binder_io *reply))txn->target.ptr;
+
+	return handler(bs, txn, msg, reply);
+	
+	
+}
+
+
 int main(int argc, char **argv)
 {
 	int fd;
@@ -122,15 +234,16 @@ int main(int argc, char **argv)
 	}
 
     	//add service
-	ret = svcmgr_publish(bs, svcmgr, "hello", (void *)123);
+	ret = svcmgr_publish(bs, svcmgr, "hello", hello_service_handler);
 	if (ret) {
 		fprintf(stderr, "failed to publish hello service\n");
 		return -1;
 	}
 
-	ret = svcmgr_publish(bs, svcmgr, "goodbye", (void *)124);
+	ret = svcmgr_publish(bs, svcmgr, "goodbye", goodbye_service_handler);
 	if (ret) {
 		fprintf(stderr, "failed to publish goodbye service\n");
+		return -1;
 	}
 
 #if 0
@@ -141,7 +254,7 @@ int main(int argc, char **argv)
 		/* reply */
 	}
 #endif
-	binder_loop(bs, hello_service_handler);
+	binder_loop(bs, test_server_handler);
 
     	return 0;
 }
