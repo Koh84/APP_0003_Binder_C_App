@@ -156,14 +156,6 @@ int main(int argc, char **argv)
 	g_bs = bs;
 
 	/* get service */
-	handle = svcmgr_lookup(bs, svcmgr, "goodbye");
-	if(!handle){
-        	fprintf(stderr, "failed to get goodbye service\n");
-        	return -1;
-    	}
-
-	g_goodbye_handle = handle;
-	fprintf(stderr, "handle for goodbye service = %d\n", g_goodbye_handle);
 
 	handle = svcmgr_lookup(bs, svcmgr, "hello");
 	if(!handle){
@@ -174,7 +166,16 @@ int main(int argc, char **argv)
 	g_hello_handle = handle;
 	fprintf(stderr, "handle for hello service = %d\n", g_hello_handle);
 
+#if 0
+	handle = svcmgr_lookup(bs, svcmgr, "goodbye");
+	if(!handle){
+        	fprintf(stderr, "failed to get goodbye service\n");
+        	return -1;
+    	}
 
+	g_goodbye_handle = handle;
+	fprintf(stderr, "handle for goodbye service = %d\n", g_goodbye_handle);
+#endif
 	/* send data to server */
 	if(!strcmp(argv[1],"hello"))
 	{
@@ -197,7 +198,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	binder_release(bs, handle);
+	binder_release(bs, g_hello_handle);
+	//binder_release(bs, g_goodbye_handle);
 
     	return 0;
 }

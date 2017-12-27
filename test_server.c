@@ -240,11 +240,11 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	ret = svcmgr_publish(bs, svcmgr, "goodbye", goodbye_service_handler);
+/*	ret = svcmgr_publish(bs, svcmgr, "goodbye", goodbye_service_handler);
 	if (ret) {
 		fprintf(stderr, "failed to publish goodbye service\n");
 		return -1;
-	}
+	}*/
 
 #if 0
     	while(1)
@@ -254,6 +254,8 @@ int main(int argc, char **argv)
 		/* reply */
 	}
 #endif
+	binder_set_maxthreads(bs, 10);
+
 	binder_loop(bs, test_server_handler);
 
     	return 0;
